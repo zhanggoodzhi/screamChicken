@@ -48,10 +48,7 @@ export class ScreamChicken extends Scene {
         this.load.image('platform', 'platform.png');
         this.load.image('powerbar_fill', 'powerbar_fill.png');
         this.load.image('chicken', 'chicken.png');
-
-
-
-
+        this.load.atlas('goat', 'animations/goat.png', 'animations/goat.json');
     }
     generatePlatforms(isFirst?: boolean) {
         // 平台参数
@@ -60,7 +57,7 @@ export class ScreamChicken extends Scene {
         // const minGap = 0; // 平台之间的最小间距
         // const maxGap = 0; // 平台之间的最大间距
 
-        const minGap = 60; // 平台之间的最小间距
+        const minGap = 100; // 平台之间的最小间距
         const maxGap = 200; // 平台之间的最大间距
         const imgWidth = 125
 
@@ -104,6 +101,7 @@ export class ScreamChicken extends Scene {
     }
 
     create() {
+
         this.setupVoiceControl();
 
         // Background
@@ -111,6 +109,8 @@ export class ScreamChicken extends Scene {
         this.background.setOrigin(0, 0).setScrollFactor(0);
 
         this.physics.world.setBounds(0, 0, Number.MAX_SAFE_INTEGER, window.innerHeight);
+
+
         this.background.setDisplaySize(this.worldWidth, window.innerHeight);
 
         // Create platforms
@@ -130,28 +130,50 @@ export class ScreamChicken extends Scene {
         // this.flag.setScale(0.08); // Scale down the flag to appropriate size
 
         // Create player (chicken)
-        this.player = this.physics.add.sprite(100, 400, 'chicken');
+        this.player = this.physics.add.sprite(100, 300, 'goat');
+        this.player.anims.create({
+            key: 'action1',
+            frames: this.anims.generateFrameNames('goat', { prefix: 'action', start: 1, end: 1 }),
+            frameRate: 1,
+            repeat: -1,
+        });
+        this.player.anims.create({
+            key: 'action2',
+            frames: this.anims.generateFrameNames('goat', { prefix: 'action', start: 2, end: 2 }),
+            frameRate: 1,
+            repeat: -1
+        });
+        this.player.anims.create({
+            key: 'action3',
+            frames: this.anims.generateFrameNames('goat', { prefix: 'action', start: 3, end: 3 }),
+            frameRate: 1,
+            repeat: -1
+        });
+
         this.player.setScale(0.4); // Scale down the chicken to appropriate size
-
+        this.player.setSize(188, 249)
         this.player.setCollideWorldBounds(true);
-        //this.player.setBounce(0.1);
         this.player.setGravityY(1000);
-
-        // Power bar setup 
-        // this.powerBarFill = this.add.image(400, 50, 'powerbar_fill');
-        // this.powerBarFill.setScale(0, 0.2); // Start with 0 width
-        // this.powerBarFill.setOrigin(0.5, 0.9);
 
         // Add collider between player and platforms
         this.physics.add.collider(this.player, this.platforms, () => {
             this.canJump = true;
-            this.player.setRotation(0); // Reset rotation when landing
             this.player.setVelocityX(0); // Reset horizontal velocity when landing
+
+            // this.player.setGravityY(0);
+            this.player.anims.play('action1');
+            this.player.setSize(188, 249)
+            if (this.player.body) {
+                this.player.body.updateFromGameObject();
+            }
+            // this.player.setGravityY(1000);
+
         });
 
         // 设置摄像机跟随玩家
         this.cameras.main.setBounds(0, 0, Number.MAX_SAFE_INTEGER, window.innerHeight); // 设置摄像机边界
-        this.cameras.main.startFollow(this.player);
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+
 
         // Mouse input
         this.input.on('pointerdown', (pointer: any) => {
@@ -199,6 +221,7 @@ export class ScreamChicken extends Scene {
     }
 
     update(time: number, delta: number) {
+
         // Update charge time and power bar
         // if (this.isCharging) {
         //     this.chargeTime = Math.min(this.chargeTime + delta, this.maxChargeTime);
@@ -219,6 +242,27 @@ export class ScreamChicken extends Scene {
         //     }).setOrigin(0.5);
         //     this.scene.pause();
         // }
+
+        // 根据速度方向切换动画
+
+        if (!this.canJump && this.player.body) {
+            if (this.player.body.velocity.y < 0 && (!this.player.anims.currentAnim || this.player.anims.currentAnim.key !== 'action2')) {
+                // 上升阶段：播放跳跃动画
+                this.player.anims.play('action2');
+                this.player.setSize(167, 256)
+                if (this.player.body) {
+                    this.player.body.updateFromGameObject();
+                }
+            } else if (this.player.body.velocity.y > 0 && (!this.player.anims.currentAnim || this.player.anims.currentAnim.key !== 'action3')) {
+                this.player.anims.play('action3');
+                this.player.setSize(258, 228)
+                console.log('235235', this.player.anims.currentAnim?.key);
+                if (this.player.body) {
+                    this.player.body.updateFromGameObject();
+                }
+            }
+        }
+
         this.handlePlatforms();
 
         // Game over if player falls too low
